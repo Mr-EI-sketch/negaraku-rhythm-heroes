@@ -20,5 +20,6 @@ Rekod mengandungi tarikh dan masa, nama, kelas, jumlah XP dan bintang, XP serta 
 
 ## Bahan lirik
 
-Permainan tidak membekalkan lirik lagu. Cikgu boleh tampal petikan yang dibekalkan dalam **Tetapan Guru**; petikan itu disimpan dalam pelayar peranti tersebut sahaja.
+Permainan tidak membekalkan lirik lagu. Cikgu boleh tampal petikan yang dibekalkan dalam **Tetapan Guru**. Petikan disimpan pada pelayar cikgu dan disertakan dalam pautan kelas yang dijana supaya murid terus boleh bermain pada telefon masing-masing. Kongsi pautan tersebut hanya kepada kelas berkenaan.
+
 
