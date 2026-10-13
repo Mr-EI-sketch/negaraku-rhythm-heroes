@@ -558,7 +558,7 @@
         const buttonLabel = allDone ? '🌟 Mulakan pengembaraan baharu' : completedCount() ? '➡️ Sambung pengembaraan' : '🗺️ Lihat misi pertama';
         $('playCard').innerHTML =
           '<div class="panel-top"><div class="eyebrow">MISI BERMULA SEKARANG</div><h3>Selamat datang ke dunia rentak!</h3><p>Empat misi menanti. Kumpul XP, buka laluan baharu dan dapatkan ganjaran wira.</p></div>' +
-          '<div class="panel-body"><div class="welcome-art"><div class="hero-emoji" aria-hidden="true">🦸‍♀️</div><div><strong>Hai, Wira Muzik!</strong><p>Masukkan nama dan kelas dahulu. Markah dihantar kepada guru selepas semua misi selesai.</p></div></div>' +
+          '<div class="panel-body"><div class="welcome-art"><div class="hero-emoji" aria-hidden="true">🦸‍♀️</div><div><strong>Hai, Wira Muzik!</strong><p>Masukkan nama dan kelas dahulu. Nama, kelas dan markah dihantar ke Google Sheet cikgu selepas misi terakhir.</p></div></div>' +
           '<div class="student-fields"><label>Nama murid<input id="studentName" type="text" maxlength="80" autocomplete="name" placeholder="Contoh: Aina" value="' + esc(student.name || '') + '"></label><label>Kelas<input id="studentClass" type="text" maxlength="40" autocomplete="off" placeholder="Contoh: 1 Proaktif" value="' + esc(student.className || '') + '"></label></div>' +
           '<div class="field-error" id="studentError" role="status"></div>' +
           '<div class="how-grid"><div class="how-item"><b>🎵 Main</b><span>Ikut cabaran rentak dan susun petikan bersama guru.</span></div><div class="how-item"><b>⚡ Kumpul XP</b><span>Setiap misi yang berjaya memberi mata pengalaman.</span></div><div class="how-item"><b>🔓 Buka</b><span>Selesaikan misi untuk membuka tahap seterusnya.</span></div></div>' +
@@ -589,7 +589,7 @@
         const current = state.fragments.join('\n');
         return '<details class="teacher-box" id="teacherBox"><summary>🧑‍🏫 Tetapan Guru</summary><div class="teacher-content">' +
           '<div class="teacher-subsection"><h4>📊 Hantar markah ke Google Sheet</h4>' +
-          '<p>Sediakan penerima sekali melalui panduan sambungan. Tampal pautan web app Apps Script cikgu, kemudian jana pautan khas untuk murid.</p>' +
+          '<p>Sediakan penerima sekali melalui panduan sambungan. Tampal pautan web app Apps Script cikgu, kemudian jana pautan khas untuk murid. Petikan guru turut dimasukkan dalam pautan itu supaya murid tidak perlu tampal pada setiap peranti.</p>' +
           '<label class="teacher-field-label">Pautan Apps Script<input id="scoreEndpoint" type="url" placeholder="https://script.google.com/macros/s/.../exec" value="' + esc(state.endpoint || '') + '"></label>' +
           '<div class="teacher-actions"><button class="btn btn-soft" id="saveScoreEndpoint" type="button">Simpan & jana pautan murid</button><span class="teacher-status" id="scoreSetupStatus" role="status">' + (state.endpoint ? 'Pautan penerima sudah tersedia.' : 'Belum disambungkan ke Google Sheet.') + '</span></div>' +
           '<div class="share-link" id="classLinkWrap" hidden><label class="teacher-field-label">Pautan untuk murid<input id="classLink" type="text" readonly></label><div class="teacher-actions"><button class="btn btn-soft" id="copyClassLink" type="button">Salin pautan kelas</button></div></div>' +
@@ -728,7 +728,7 @@
         const submission = state.submission || {};
         let delivery = '';
         if (submission.status === 'sending') delivery = '<div class="note" role="status">📨 Sedang menghantar markah ke Google Sheet cikgu…</div>';
-        else if (submission.status === 'sent') delivery = '<div class="note" role="status">✅ Permintaan markah sudah dihantar. Cikgu boleh semak Google Sheet.</div>';
+        else if (submission.status === 'sent') delivery = '<div class="note" role="status">✅ Permintaan penghantaran markah sudah dihantar. Cikgu boleh semak Google Sheet.</div>';
         else if (submission.status === 'error') delivery = '<div class="note" role="status">⚠️ Sambungan gagal. Semak internet atau pautan kelas, kemudian cuba semula.</div>';
         else if (allDone) delivery = '<div class="note" role="status">📌 Markah belum dihantar. Pastikan cikgu sambungkan Google Sheet dan gunakan pautan kelas.</div>';
         const retry = allDone && submission.status !== 'sent' ? '<button class="btn btn-soft" id="retrySubmit" type="button">📨 Cuba hantar markah</button>' : '';
