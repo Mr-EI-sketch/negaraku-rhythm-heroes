@@ -29,7 +29,7 @@
         radial-gradient(ellipse at 100% 10%, #eee5ff 0, transparent 30rem), var(--bg);
       min-height: 100vh;
     }
-    button, textarea { font: inherit; }
+    button, textarea, input { font: inherit; }
     button { cursor: pointer; touch-action: manipulation; }
     button:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 3px solid #ffbd3f; outline-offset: 3px; }
     .topbar { background: var(--navy); color: white; padding: 13px max(18px, calc((100vw - 1200px)/2)); display:flex; align-items:center; justify-content:space-between; gap:14px; box-shadow:0 8px 22px #13245b2c; }
@@ -105,6 +105,15 @@
     .teacher-content { border-top:1px solid var(--line); padding:15px; }
     .teacher-content p { margin:0 0 11px; color:var(--muted); font-size:12px; line-height:1.5; }
     textarea { resize:vertical; display:block; width:100%; min-height:105px; border:1px solid #d8deee; border-radius:12px; background:white; color:var(--ink); padding:12px; font-size:14px; line-height:1.5; }
+    input[type="text"], input[type="url"] { display:block; width:100%; min-height:48px; border:1px solid #d8deee; border-radius:12px; background:white; color:var(--ink); padding:11px 12px; font-size:15px; }
+    .student-fields { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 0; text-align:left; }
+    .student-fields label, .teacher-field-label { display:grid; gap:6px; color:var(--navy); font-weight:800; font-size:12px; }
+    .student-fields input { min-width:0; }
+    .field-error { color:#b64b3c; font-size:12px; min-height:18px; text-align:left; margin:0 0 8px; }
+    .teacher-subsection { padding:4px 0 13px; }
+    .teacher-subsection + .teacher-subsection { border-top:1px solid var(--line); padding-top:14px; margin-top:9px; }
+    .teacher-subsection h4 { margin:0 0 6px; color:var(--navy); font-size:14px; }
+    .share-link { margin-top:10px; }
     .teacher-actions { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-top:10px; }
     .teacher-status { font-size:12px; color:var(--muted); }
     .note { border-radius:14px; padding:12px 14px; background:#fff8df; color:#6d5912; font-size:12px; line-height:1.5; margin:14px 0; }
@@ -169,6 +178,7 @@
       .how-item span { font-size:11px; }
       .welcome-art { padding:13px; gap:12px; }
       .hero-emoji { width:60px; height:60px; flex-basis:60px; font-size:41px; border-radius:18px; }
+      .student-fields { grid-template-columns:1fr; }
       .footer { padding:0 14px 18px; }
     }
     @media (max-width:380px) {
@@ -234,9 +244,19 @@
       const symbols = { clap:'👏', tap:'🥁', rest:'🤫' };
       const names = { clap:'Tepuk', tap:'Ketuk', rest:'Senyap' };
       const saved = readSaved();
+      const linkParams = new URLSearchParams(window.location.search);
+      const linkEndpoint = linkParams.get('submitTo') || '';
+      const configuredEndpoint = isAppsScriptUrl(linkEndpoint) ? linkEndpoint : (saved.endpoint || '');
+      const configuredFragments = linkParams.has('fragments')
+        ? linkParams.get('fragments').split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
+        : (Array.isArray(saved.fragments) ? saved.fragments : []);
       let state = {
         completed: saved.completed || {},
-        fragments: Array.isArray(saved.fragments) ? saved.fragments : []
+        fragments: configuredFragments,
+        student: saved.student || { name:'', className:'' },
+        endpoint: configuredEndpoint,
+        sessionId: saved.sessionId || '',
+        submission: saved.submission || null
       };
       let selectedId = 0;
       let game = null;
@@ -245,6 +265,18 @@
       function readSaved() {
         try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; }
         catch { return {}; }
+      }
+      function isAppsScriptUrl(value) {
+        return /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec\/?$/.test(String(value || '').trim());
+      }
+      function createSessionId() {
+        return window.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random().toString(36).slice(2);
+      }
+      function hasStudent() {
+        return Boolean(state.student && state.student.name && state.student.className);
+      }
+      function allMissionsDone() {
+        return missions.every((item) => state.completed[item.id]);
       }
       function persist() {
         try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
@@ -520,10 +552,203 @@
         $('continueGame').addEventListener('click', () => { game=null; selectedId = allDone ? 0 : Math.min(4,id+1); render(); if (!allDone) $('playCard').scrollIntoView({behavior:'smooth',block:'start'}); });
         $('replayGame').addEventListener('click', () => startMission(id));
       }
+      function renderWelcome() {
+        const allDone = allMissionsDone();
+        const student = state.student || { name:'', className:'' };
+        const buttonLabel = allDone ? '🌟 Mulakan pengembaraan baharu' : completedCount() ? '➡️ Sambung pengembaraan' : '🗺️ Lihat misi pertama';
+        $('playCard').innerHTML =
+          '<div class="panel-top"><div class="eyebrow">MISI BERMULA SEKARANG</div><h3>Selamat datang ke dunia rentak!</h3><p>Empat misi menanti. Kumpul XP, buka laluan baharu dan dapatkan ganjaran wira.</p></div>' +
+          '<div class="panel-body"><div class="welcome-art"><div class="hero-emoji" aria-hidden="true">🦸‍♀️</div><div><strong>Hai, Wira Muzik!</strong><p>Masukkan nama dan kelas dahulu. Markah dihantar kepada guru selepas semua misi selesai.</p></div></div>' +
+          '<div class="student-fields"><label>Nama murid<input id="studentName" type="text" maxlength="80" autocomplete="name" placeholder="Contoh: Aina" value="' + esc(student.name || '') + '"></label><label>Kelas<input id="studentClass" type="text" maxlength="40" autocomplete="off" placeholder="Contoh: 1 Proaktif" value="' + esc(student.className || '') + '"></label></div>' +
+          '<div class="field-error" id="studentError" role="status"></div>' +
+          '<div class="how-grid"><div class="how-item"><b>🎵 Main</b><span>Ikut cabaran rentak dan susun petikan bersama guru.</span></div><div class="how-item"><b>⚡ Kumpul XP</b><span>Setiap misi yang berjaya memberi mata pengalaman.</span></div><div class="how-item"><b>🔓 Buka</b><span>Selesaikan misi untuk membuka tahap seterusnya.</span></div></div>' +
+          '<div class="note"><strong>Nota guru:</strong> Permainan tidak memaparkan lirik lagu. Untuk misi susunan, guru boleh tampal petikan dalam Tetapan Guru.</div>' +
+          '<button class="btn btn-primary" id="beginButton" type="button">' + buttonLabel + '</button></div>';
+        $('beginButton').addEventListener('click', () => {
+          const name = $('studentName').value.trim();
+          const className = $('studentClass').value.trim();
+          if (!name || !className) {
+            $('studentError').textContent = 'Isi nama dan kelas dahulu, Wira Muzik.';
+            (!name ? $('studentName') : $('studentClass')).focus();
+            return;
+          }
+          const changedStudent = hasStudent() && (state.student.name !== name || state.student.className !== className);
+          if (changedStudent || allMissionsDone() || !state.sessionId) {
+            state.completed = {};
+            state.sessionId = createSessionId();
+            state.submission = null;
+          }
+          state.student = { name, className };
+          persist();
+          const next = missions.find((item) => !state.completed[item.id]);
+          openMission(next ? next.id : 1);
+        });
+      }
+
+      function teacherEditor() {
+        const current = state.fragments.join('\n');
+        return '<details class="teacher-box" id="teacherBox"><summary>🧑‍🏫 Tetapan Guru</summary><div class="teacher-content">' +
+          '<div class="teacher-subsection"><h4>📊 Hantar markah ke Google Sheet</h4>' +
+          '<p>Sediakan penerima sekali melalui panduan sambungan. Tampal pautan web app Apps Script cikgu, kemudian jana pautan khas untuk murid.</p>' +
+          '<label class="teacher-field-label">Pautan Apps Script<input id="scoreEndpoint" type="url" placeholder="https://script.google.com/macros/s/.../exec" value="' + esc(state.endpoint || '') + '"></label>' +
+          '<div class="teacher-actions"><button class="btn btn-soft" id="saveScoreEndpoint" type="button">Simpan & jana pautan murid</button><span class="teacher-status" id="scoreSetupStatus" role="status">' + (state.endpoint ? 'Pautan penerima sudah tersedia.' : 'Belum disambungkan ke Google Sheet.') + '</span></div>' +
+          '<div class="share-link" id="classLinkWrap" hidden><label class="teacher-field-label">Pautan untuk murid<input id="classLink" type="text" readonly></label><div class="teacher-actions"><button class="btn btn-soft" id="copyClassLink" type="button">Salin pautan kelas</button></div></div>' +
+          '<p style="margin:11px 0 0"><a href="https://github.com/eijas97-sketch/negaraku-rhythm-heroes/blob/main/README.md#sambungan-google-sheet" target="_blank" rel="noopener">Buka panduan sambungan Google Sheet</a></p></div>' +
+          '<div class="teacher-subsection"><h4>🎼 Petikan untuk misi susunan</h4>' +
+          '<p>Tampal petikan yang disediakan guru, satu petikan pada setiap baris dan dalam urutan yang betul. Sekurang-kurangnya dua baris diperlukan. Kandungan disimpan pada peranti ini sahaja.</p>' +
+          '<textarea id="fragmentInput" aria-label="Petikan lirik daripada guru" placeholder="[Petikan guru 1]\n[Petikan guru 2]\n[Petikan guru 3]">' + esc(current) + '</textarea>' +
+          '<div class="teacher-actions"><button class="btn btn-soft" id="saveFragments" type="button">Simpan petikan</button><span class="teacher-status" id="teacherStatus">' + (state.fragments.length ? state.fragments.length + ' petikan disimpan pada peranti ini.' : 'Belum ada petikan disimpan.') + '</span></div></div>' +
+          '</div></details>';
+      }
+
+      function bindTeacherEditor() {
+        const save = $('saveFragments');
+        if (save) save.addEventListener('click', () => {
+          const fragments = $('fragmentInput').value.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+          if (fragments.length < 2) {
+            $('teacherStatus').textContent = 'Masukkan sekurang-kurangnya dua petikan, satu pada setiap baris.';
+            $('teacherStatus').style.color = '#b64b3c';
+            return;
+          }
+          state.fragments = fragments;
+          persist();
+          $('teacherStatus').textContent = fragments.length + ' petikan disimpan pada peranti ini.';
+          $('teacherStatus').style.color = '#168466';
+          if ([2,4].includes(selectedId) && (!game || !game.started)) renderMissionIntro(selectedId);
+        });
+        $('saveScoreEndpoint').addEventListener('click', () => {
+          const endpoint = $('scoreEndpoint').value.trim();
+          const status = $('scoreSetupStatus');
+          if (!isAppsScriptUrl(endpoint)) {
+            status.textContent = 'Semak pautan Apps Script cikgu yang berakhir dengan /exec.';
+            status.style.color = '#b64b3c';
+            return;
+          }
+          state.endpoint = endpoint.replace(/\/$/, '');
+          persist();
+          const classUrl = new URL(window.location.href);
+          classUrl.search = '';
+          classUrl.hash = '';
+          classUrl.searchParams.set('submitTo', state.endpoint);
+          if (state.fragments.length) classUrl.searchParams.set('fragments', state.fragments.join('\n'));
+          else classUrl.searchParams.delete('fragments');
+          $('classLink').value = classUrl.href;
+          $('classLinkWrap').hidden = false;
+          status.textContent = 'Sedia! Salin pautan ini dan kongsi kepada murid.';
+          status.style.color = '#168466';
+          if (allMissionsDone() && (!state.submission || state.submission.status !== 'sent')) submitResults();
+        });
+        $('copyClassLink').addEventListener('click', async () => {
+          const input = $('classLink');
+          input.focus();
+          input.select();
+          try {
+            await navigator.clipboard.writeText(input.value);
+            $('scoreSetupStatus').textContent = 'Pautan kelas sudah disalin. Hantar kepada murid.';
+          } catch {
+            $('scoreSetupStatus').textContent = 'Pautan dipaparkan dan dipilih. Tekan lama untuk menyalinnya.';
+          }
+        });
+      }
+
+      function openMission(id) {
+        if (!hasStudent()) {
+          selectedId = 0;
+          game = null;
+          render();
+          $('studentError').textContent = 'Isi nama dan kelas dahulu, Wira Muzik.';
+          $('studentName').focus();
+          return;
+        }
+        if (!isUnlocked(id)) return;
+        selectedId = id;
+        game = null;
+        render();
+        if (window.matchMedia('(max-width: 760px)').matches) $('playCard').scrollIntoView({behavior:'smooth', block:'start'});
+      }
+
+      function startMission(id) {
+        if (!hasStudent()) { openMission(id); return; }
+        const m = missions.find((item) => item.id === id);
+        if ((m.kind === 'order' || m.kind === 'final') && state.fragments.length < 2) { openTeacher(); return; }
+        game = { missionId:id, started:true, round:0, points:0, tries:0, roundTries:0, input:[], showPattern:true, feedback:'', order:m.kind === 'order' || m.kind === 'final' ? shuffle(state.fragments) : [], orderTries:0, orderChecked:false, orderCorrect:false, performanceDone:false };
+        render();
+      }
+
+      async function submitResults() {
+        if (!allMissionsDone() || !hasStudent()) return;
+        if (state.submission && state.submission.sessionId === state.sessionId && ['sending','sent'].includes(state.submission.status)) return;
+        if (!state.endpoint) {
+          state.submission = { sessionId:state.sessionId, status:'not-configured' };
+          persist();
+          render();
+          return;
+        }
+        const payload = {
+          version:1,
+          sessionId:state.sessionId || createSessionId(),
+          name:state.student.name,
+          className:state.student.className,
+          totalXp:totalXP(),
+          totalStars:totalStars(),
+          missions:missions.map((item) => ({ missionId:item.id, xp:Number(state.completed[item.id].score || 0), stars:Number(state.completed[item.id].stars || 0) }))
+        };
+        state.submission = { sessionId:payload.sessionId, status:'sending' };
+        persist();
+        render();
+        try {
+          await fetch(state.endpoint, {
+            method:'POST',
+            mode:'no-cors',
+            cache:'no-store',
+            headers:{'Content-Type':'text/plain;charset=utf-8'},
+            body:JSON.stringify(payload)
+          });
+          state.submission = { sessionId:payload.sessionId, status:'sent', sentAt:new Date().toISOString() };
+        } catch {
+          state.submission = { sessionId:payload.sessionId, status:'error' };
+        }
+        persist();
+        if (game && game.finished && allMissionsDone()) render();
+      }
+
+      function completeMission(id, score, stars) {
+        const old = state.completed[id];
+        state.completed[id] = { score:Math.max(score,Number(old?.score || 0)), stars:Math.max(stars,Number(old?.stars || 0)) };
+        persist();
+        game = { missionId:id, finished:true, lastScore:score, stars:state.completed[id].stars };
+        render();
+        if (allMissionsDone()) submitResults();
+      }
+
+      function renderWin() {
+        const id = game.missionId;
+        const m = missions.find((item) => item.id === id);
+        const allDone = allMissionsDone();
+        const submission = state.submission || {};
+        let delivery = '';
+        if (submission.status === 'sending') delivery = '<div class="note" role="status">📨 Sedang menghantar markah ke Google Sheet cikgu…</div>';
+        else if (submission.status === 'sent') delivery = '<div class="note" role="status">✅ Permintaan markah sudah dihantar. Cikgu boleh semak Google Sheet.</div>';
+        else if (submission.status === 'error') delivery = '<div class="note" role="status">⚠️ Sambungan gagal. Semak internet atau pautan kelas, kemudian cuba semula.</div>';
+        else if (allDone) delivery = '<div class="note" role="status">📌 Markah belum dihantar. Pastikan cikgu sambungkan Google Sheet dan gunakan pautan kelas.</div>';
+        const retry = allDone && submission.status !== 'sent' ? '<button class="btn btn-soft" id="retrySubmit" type="button">📨 Cuba hantar markah</button>' : '';
+        $('playCard').innerHTML =
+          '<div class="panel-top"><div class="eyebrow">' + (allDone ? 'SEMUA MISI SELESAI' : 'MISI SELESAI') + '</div><h3>' + (allDone ? '🏆 Wira Negaraku!' : m.icon + ' Misi berjaya!') + '</h3><p>' + (allDone ? 'Kamu sudah menamatkan seluruh pengembaraan Rhythm Heroes!' : 'Kamu berjaya menyelesaikan “' + esc(m.title) + '”. Laluan baharu sudah terbuka.') + '</p></div>' +
+          '<div class="panel-body"><div class="win-screen"><div class="win-emoji">' + (allDone ? '👑' : m.badge) + '</div><h3>' + (allDone ? 'Tahniah, Wira!' : 'Hebat sekali!') + '</h3><p>' + (allDone ? 'Semua rentak dan petikan sudah kamu kuasai. Jemput guru dan rakan meraikan usaha kamu!' : 'Ganjaran diperoleh: ' + esc(m.reward) + '. Teruskan pengembaraan untuk buka misi seterusnya.') + '</p>' +
+          '<div class="win-score"><span>⚡ +' + game.lastScore + ' XP</span><span class="stars">' + '⭐'.repeat(game.stars) + '☆'.repeat(3-game.stars) + '</span></div>' +
+          (allDone ? '<div class="final-banner">🌟 Semua misi selesai · ' + totalXP() + ' XP terkumpul · ' + totalStars() + ' bintang!<br>Wira Muzik, kamu memang hebat.</div>' + delivery : '') +
+          '<div class="panel-actions"><button class="btn btn-primary" id="continueGame" type="button">' + (allDone ? '🗺️ Lihat peta lagi' : '➡️ Teruskan') + '</button><button class="btn btn-soft" id="replayGame" type="button">🔁 Main semula</button>' + retry + '</div></div></div>';
+        $('continueGame').addEventListener('click', () => { game=null; selectedId = allDone ? 0 : Math.min(4,id+1); render(); if (!allDone) $('playCard').scrollIntoView({behavior:'smooth',block:'start'}); });
+        $('replayGame').addEventListener('click', () => startMission(id));
+        const retryButton = $('retrySubmit');
+        if (retryButton) retryButton.addEventListener('click', submitResults);
+      }
+
       $('teacherShortcut').addEventListener('click', openTeacher);
       $('resetProgress').addEventListener('click', () => {
-        if (!window.confirm('Padam semua XP, bintang dan misi yang telah selesai? Petikan guru akan kekal.')) return;
-        state.completed = {}; persist(); selectedId=0; game=null; render();
+        if (!window.confirm('Padam nama, kelas, semua XP, bintang dan misi yang telah selesai? Petikan guru akan kekal.')) return;
+        state.completed = {}; state.student = { name:'', className:'' }; state.sessionId = ''; state.submission = null;
+        persist(); selectedId=0; game=null; render();
       });
       render();
     })();
