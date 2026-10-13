@@ -21,10 +21,10 @@ function doPost(e) {
     if (!e || !e.postData || !e.postData.contents) throw new Error('Data kosong.');
     const result = JSON.parse(e.postData.contents);
     const row = makeRow_(result);
-    const sheet = getSheet_();
     const lock = LockService.getScriptLock();
     lock.waitLock(10000);
     try {
+      const sheet = getSheet_();
       const lastRow = sheet.getLastRow();
       if (lastRow > 1) {
         const existingIds = sheet.getRange(2, HEADERS.length, lastRow - 1, 1).getDisplayValues().flat();
