@@ -247,6 +247,7 @@
       const linkParams = new URLSearchParams(window.location.search);
       const linkEndpoint = linkParams.get('submitTo') || '';
       const configuredEndpoint = isAppsScriptUrl(linkEndpoint) ? linkEndpoint : (saved.endpoint || '');
+      const studentMode = linkParams.get('mode') === 'student' || isAppsScriptUrl(linkEndpoint);
       const configuredFragments = linkParams.has('fragments')
         ? linkParams.get('fragments').split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
         : (Array.isArray(saved.fragments) ? saved.fragments : []);
@@ -294,7 +295,9 @@
         $('xpTotal').textContent = `${totalXP()} XP`;
         $('starTotal').textContent = totalStars();
         $('progressText').textContent = `${completedCount()} / 4 misi`;
-        if (!$('teacherToolsSlot').innerHTML) {
+        $('teacherShortcut').hidden = studentMode;
+        $('teacherToolsSlot').hidden = studentMode;
+        if (!studentMode && !$('teacherToolsSlot').innerHTML) {
           $('teacherToolsSlot').innerHTML = teacherEditor();
           bindTeacherEditor();
         }
@@ -630,6 +633,7 @@
           classUrl.search = '';
           classUrl.hash = '';
           classUrl.searchParams.set('submitTo', state.endpoint);
+          classUrl.searchParams.set('mode', 'student');
           if (state.fragments.length) classUrl.searchParams.set('fragments', state.fragments.join('\n'));
           else classUrl.searchParams.delete('fragments');
           $('classLink').value = classUrl.href;
