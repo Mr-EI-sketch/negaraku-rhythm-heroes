@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#13245b">
+  <title>NEGARAKU: RHYTHM HEROES</title>
+  <style>
+    :root {
+      --navy: #13245b;
+      --blue: #3458d4;
+      --sky: #eaf3ff;
+      --purple: #7048cb;
+      --yellow: #ffd64d;
+      --coral: #ff785f;
+      --mint: #4dc8a4;
+      --ink: #202b50;
+      --muted: #6f7893;
+      --line: #e5e9f4;
+      --paper: #fff;
+      --bg: #f3f6ff;
+      --shadow: 0 16px 40px rgba(25, 43, 104, .10);
+      font-family: "Trebuchet MS", "Arial Rounded MT Bold", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--ink); background:
+        radial-gradient(ellipse at 10% 0%, #dbe9ff 0, transparent 32rem),
+        radial-gradient(ellipse at 100% 10%, #eee5ff 0, transparent 30rem), var(--bg);
+      min-height: 100vh;
+    }
+    button, textarea { font: inherit; }
+    button { cursor: pointer; touch-action: manipulation; }
+    button:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 3px solid #ffbd3f; outline-offset: 3px; }
+    .topbar { background: var(--navy); color: white; padding: 13px max(18px, calc((100vw - 1200px)/2)); display:flex; align-items:center; justify-content:space-between; gap:14px; box-shadow:0 8px 22px #13245b2c; }
+    .brand { display:flex; align-items:center; gap:11px; min-width:0; }
+    .brand-mark { width:43px; height:43px; flex:0 0 43px; display:grid; place-items:center; border-radius:14px; background:linear-gradient(145deg,var(--yellow),#ffad35); color:var(--navy); font-size:23px; box-shadow:inset 0 -3px #d78c20; }
+    .brand h1 { margin:0; font-size:clamp(14px,2vw,20px); letter-spacing:.045em; line-height:1.12; }
+    .brand small { display:block; opacity:.75; font-size:11px; margin-top:4px; letter-spacing:.04em; }
+    .header-stats { display:flex; align-items:center; gap:9px; }
+    .stat-pill { display:flex; align-items:center; gap:7px; background:#ffffff18; border:1px solid #ffffff2b; padding:9px 12px; border-radius:999px; color:white; font-weight:800; font-size:13px; white-space:nowrap; }
+    .teacher-shortcut { border:0; border-radius:13px; padding:10px 13px; background:#fff; color:var(--navy); font-weight:900; min-height:42px; }
+    .page { max-width:1200px; margin:auto; padding:26px 20px 42px; }
+    .intro { display:flex; justify-content:space-between; align-items:flex-end; gap:18px; margin:3px 0 21px; }
+    .intro h2 { margin:0 0 6px; font-size:clamp(24px,3vw,34px); color:var(--navy); letter-spacing:-.03em; }
+    .intro p { margin:0; color:var(--muted); font-size:15px; line-height:1.5; }
+    .progress-chip { flex:0 0 auto; padding:11px 15px; background:white; border:1px solid var(--line); border-radius:16px; box-shadow:0 7px 20px #162a6410; font-weight:800; color:var(--navy); }
+    .progress-chip span { color:var(--purple); }
+    .layout { display:grid; grid-template-columns:minmax(275px, .84fr) minmax(0,1.5fr); align-items:start; gap:20px; }
+    .card { background:var(--paper); border:1px solid #e8ecf6; border-radius:24px; box-shadow:var(--shadow); overflow:hidden; }
+    .map-card { padding:21px; }
+    .section-title { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:7px; }
+    .section-title h3 { color:var(--navy); margin:0; font-size:18px; }
+    .tiny-label { font-size:11px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:var(--purple); background:#f0eaff; padding:7px 9px; border-radius:999px; white-space:nowrap; }
+    .map-hint { color:var(--muted); margin:0 0 19px; line-height:1.45; font-size:13px; }
+    .mission-list { display:grid; gap:10px; position:relative; }
+    .mission-list:before { content:""; position:absolute; left:26px; top:37px; bottom:38px; border-left:3px dashed #d6def8; }
+    .map-node { position:relative; z-index:1; width:100%; border:1.5px solid var(--line); border-radius:17px; padding:10px 11px; display:flex; align-items:center; text-align:left; gap:11px; background:#fff; color:var(--ink); min-height:72px; transition:transform .16s, box-shadow .16s, border .16s; }
+    .map-node:not(:disabled):hover { transform:translateY(-2px); border-color:#aab9f7; box-shadow:0 8px 17px #223b8c13; }
+    .map-node.selected { border:2px solid var(--blue); background:#f4f7ff; box-shadow:0 7px 18px #3458d426; }
+    .map-node.complete { border-color:#bfe9dc; background:#f4fffb; }
+    .map-node:disabled { cursor:not-allowed; color:#a3a8b8; background:#f8f9fc; }
+    .node-icon { width:43px; height:43px; display:grid; place-items:center; flex:0 0 43px; border-radius:14px; background:#edf2ff; font-size:22px; }
+    .map-node:nth-child(2) .node-icon { background:#fff5d6; }
+    .map-node:nth-child(3) .node-icon { background:#f1eaff; }
+    .map-node:nth-child(4) .node-icon { background:#ffe8e2; }
+    .node-text { min-width:0; flex:1; }
+    .node-text strong { display:block; color:var(--navy); font-size:14px; margin-bottom:4px; }
+    .node-text small { display:block; color:var(--muted); font-size:11px; line-height:1.3; }
+    .node-status { font-size:16px; flex:0 0 auto; }
+    .rewards { border-top:1px solid var(--line); margin:18px -21px -21px; padding:16px 21px 19px; background:#fbfcff; }
+    .rewards h4 { margin:0 0 10px; color:var(--navy); font-size:13px; }
+    .badge-row { display:flex; gap:8px; }
+    .badge { width:44px; height:44px; display:grid; place-items:center; font-size:21px; border-radius:14px; background:#eef0f6; filter:grayscale(1); opacity:.5; position:relative; }
+    .badge.earned { background:#fff3c8; filter:none; opacity:1; box-shadow:inset 0 -2px #f1d36d; }
+    .badge[title] { cursor:help; }
+    .play-card { min-height:475px; }
+    .panel-top { padding:24px 25px 20px; background:linear-gradient(120deg,#273f9c,#6149c9); color:white; position:relative; overflow:hidden; }
+    .panel-top:after { content:"♫"; position:absolute; right:23px; top:-26px; font-size:117px; opacity:.11; transform:rotate(10deg); }
+    .panel-top .eyebrow { text-transform:uppercase; letter-spacing:.12em; font-weight:900; font-size:10px; opacity:.8; }
+    .panel-top h3 { margin:6px 0 6px; font-size:24px; position:relative; z-index:1; }
+    .panel-top p { margin:0; font-size:13px; opacity:.88; position:relative; z-index:1; line-height:1.5; max-width:560px; }
+    .panel-body { padding:24px 25px 26px; }
+    .welcome-art { display:flex; align-items:center; gap:18px; background:linear-gradient(120deg,#f0f5ff,#fff6da); padding:18px; border:1px solid #e7ecff; border-radius:20px; margin-bottom:17px; }
+    .hero-emoji { font-size:50px; width:73px; height:73px; flex:0 0 73px; display:grid; place-items:center; background:#fff; border-radius:22px; box-shadow:0 8px 18px #263e9116; }
+    .welcome-art strong { display:block; color:var(--navy); font-size:17px; margin-bottom:5px; }
+    .welcome-art p { margin:0; color:var(--muted); font-size:13px; line-height:1.45; }
+    .how-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:16px 0 20px; }
+    .how-item { padding:13px 12px; border-radius:15px; background:#f7f8fd; min-height:91px; }
+    .how-item b { display:block; font-size:17px; margin-bottom:6px; }
+    .how-item span { color:var(--muted); font-size:12px; line-height:1.4; display:block; }
+    .btn { border:0; border-radius:14px; min-height:48px; padding:12px 17px; font-weight:900; display:inline-flex; align-items:center; justify-content:center; gap:8px; transition:transform .12s,filter .12s; }
+    .btn:active { transform:scale(.98); }
+    .btn-primary { color:white; background:linear-gradient(135deg,#385ee0,#694bd0); box-shadow:0 7px 16px #3b56c336; }
+    .btn-primary:hover { filter:brightness(1.06); }
+    .btn-soft { color:var(--navy); background:#edf1ff; }
+    .btn-yellow { color:#533e00; background:var(--yellow); box-shadow:0 5px 0 #e7b932; }
+    .btn-coral { background:#fff0ed; color:#b64b3c; }
+    .btn:disabled { opacity:.45; cursor:not-allowed; box-shadow:none; }
+    .teacher-box { border:1px solid #dfe5f7; border-radius:17px; background:#fbfcff; margin-top:19px; overflow:hidden; }
+    .teacher-box summary { list-style:none; padding:14px 16px; cursor:pointer; color:var(--navy); font-weight:900; display:flex; justify-content:space-between; align-items:center; }
+    .teacher-box summary::-webkit-details-marker { display:none; }
+    .teacher-box summary:after { content:"＋"; color:var(--purple); font-size:18px; }
+    .teacher-box[open] summary:after { content:"−"; }
+    .teacher-content { border-top:1px solid var(--line); padding:15px; }
+    .teacher-content p { margin:0 0 11px; color:var(--muted); font-size:12px; line-height:1.5; }
+    textarea { resize:vertical; display:block; width:100%; min-height:105px; border:1px solid #d8deee; border-radius:12px; background:white; color:var(--ink); padding:12px; font-size:14px; line-height:1.5; }
+    .teacher-actions { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-top:10px; }
+    .teacher-status { font-size:12px; color:var(--muted); }
+    .note { border-radius:14px; padding:12px 14px; background:#fff8df; color:#6d5912; font-size:12px; line-height:1.5; margin:14px 0; }
+    .mission-meta { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:15px; }
+    .round-dots { display:flex; gap:6px; }
+    .round-dot { width:9px; height:9px; border-radius:50%; background:#e3e7f1; }
+    .round-dot.done { background:var(--mint); }
+    .round-dot.current { background:var(--yellow); box-shadow:0 0 0 3px #fff3bf; }
+    .score-mini { color:var(--purple); font-weight:900; font-size:13px; }
+    .challenge-box { background:#f8f9fe; border:1px solid #edf0f8; border-radius:19px; padding:17px; text-align:center; }
+    .challenge-box h4 { color:var(--navy); margin:0 0 5px; font-size:17px; }
+    .challenge-box p { color:var(--muted); font-size:13px; margin:0 0 15px; line-height:1.45; }
+    .pattern { min-height:70px; display:flex; align-items:center; justify-content:center; gap:8px; margin:10px 0 14px; flex-wrap:wrap; }
+    .pattern-token { min-width:51px; height:54px; padding:0 10px; border-radius:15px; display:grid; place-items:center; background:#fff; border:2px solid #e3e8f8; box-shadow:0 4px 0 #e8ecf7; font-size:24px; }
+    .pattern-token.blank { background:#eceff7; color:#9ba3b9; border-style:dashed; box-shadow:none; }
+    .action-row { display:flex; justify-content:center; gap:9px; flex-wrap:wrap; margin:10px 0 4px; }
+    .action-btn { min-width:90px; min-height:62px; border:2px solid #e3e8f8; border-radius:16px; color:var(--navy); background:white; font-weight:900; padding:8px 12px; box-shadow:0 4px 0 #e8ecf7; }
+    .action-btn span { display:block; font-size:23px; margin-bottom:3px; }
+    .result-message { margin:13px auto 0; font-weight:800; font-size:14px; line-height:1.45; min-height:20px; color:var(--purple); }
+    .result-message.good { color:#168466; }
+    .result-message.try { color:#bf6145; }
+    .panel-actions { display:flex; flex-wrap:wrap; gap:9px; justify-content:center; margin-top:16px; }
+    .order-list { list-style:none; padding:0; margin:13px 0; display:grid; gap:8px; text-align:left; }
+    .order-row { display:flex; align-items:center; gap:8px; padding:9px; border-radius:14px; background:white; border:1px solid #e4e8f2; min-height:58px; }
+    .order-num { width:30px; height:30px; flex:0 0 30px; display:grid; place-items:center; border-radius:10px; background:#eef1ff; color:var(--purple); font-weight:900; }
+    .order-text { flex:1; font-size:14px; line-height:1.4; overflow-wrap:anywhere; }
+    .move-btn { width:42px; height:42px; flex:0 0 42px; border:0; border-radius:12px; background:#f1f3fb; color:var(--navy); font-size:20px; font-weight:900; }
+    .move-btn:disabled { opacity:.35; }
+    .performance { background:#fff8df; border:1px solid #ffebaa; border-radius:16px; padding:15px; margin-top:14px; text-align:left; }
+    .performance h4 { margin:0 0 5px; color:#735800; }
+    .performance p { color:#786c47; margin:0 0 12px; font-size:13px; line-height:1.45; }
+    .win-screen { text-align:center; padding:9px 5px 4px; }
+    .win-emoji { width:95px; height:95px; margin:0 auto 14px; display:grid; place-items:center; font-size:53px; background:#fff3c6; border-radius:30px; box-shadow:inset 0 -5px #f2d66d; animation:bob 1.8s ease-in-out infinite; }
+    @keyframes bob { 50% { transform:translateY(-5px) rotate(2deg); } }
+    .win-screen h3 { margin:0 0 7px; color:var(--navy); font-size:27px; }
+    .win-screen p { margin:0 auto 15px; color:var(--muted); line-height:1.5; max-width:440px; }
+    .win-score { display:inline-flex; gap:12px; align-items:center; background:#f5f2ff; color:var(--purple); font-size:18px; font-weight:900; border-radius:16px; padding:12px 17px; margin:3px 0 17px; }
+    .stars { letter-spacing:3px; font-size:20px; color:#f2b91c; }
+    .final-banner { background:linear-gradient(130deg,#fff3c6,#ffe3d3,#f3e9ff); border-radius:19px; padding:14px; margin:12px 0 18px; font-weight:800; color:var(--navy); line-height:1.5; }
+    .footer { max-width:1200px; margin:0 auto; padding:0 20px 24px; display:flex; justify-content:space-between; align-items:center; color:#8a91a6; font-size:11px; gap:15px; }
+    .footer button { border:0; background:none; color:#7b84a2; text-decoration:underline; padding:8px 0; }
+    .locked-hint { margin-top:11px; padding:10px 12px; background:#f8f8fb; border-radius:12px; color:#777f96; font-size:12px; line-height:1.45; }
+    @media (max-width:760px) {
+      .topbar { padding:11px 14px; }
+      .brand-mark { width:39px; height:39px; flex-basis:39px; }
+      .brand small { display:none; }
+      .header-stats { gap:6px; }
+      .stat-pill { padding:8px 9px; font-size:12px; }
+      .teacher-shortcut { padding:9px 10px; font-size:12px; }
+      .page { padding:18px 13px 28px; }
+      .intro { display:block; margin-bottom:15px; }
+      .progress-chip { display:inline-block; margin-top:12px; font-size:12px; padding:9px 12px; }
+      .layout { grid-template-columns:1fr; gap:14px; }
+      .map-card { padding:16px; }
+      .rewards { margin:15px -16px -16px; padding:14px 16px 16px; }
+      .play-card { min-height:0; }
+      .panel-top { padding:19px 18px 17px; }
+      .panel-top h3 { font-size:21px; }
+      .panel-body { padding:17px 15px 20px; }
+      .how-grid { gap:7px; }
+      .how-item { padding:10px 8px; }
+      .how-item span { font-size:11px; }
+      .welcome-art { padding:13px; gap:12px; }
+      .hero-emoji { width:60px; height:60px; flex-basis:60px; font-size:41px; border-radius:18px; }
+      .footer { padding:0 14px 18px; }
+    }
+    @media (max-width:380px) {
+      .brand h1 { font-size:12px; }
+      .stat-pill { font-size:11px; }
+      .teacher-shortcut { font-size:11px; }
+      .action-btn { min-width:78px; }
+      .order-row { gap:5px; padding:7px; }
+      .move-btn { width:38px; height:40px; flex-basis:38px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">♫</div>
+      <div><h1>NEGARAKU: RHYTHM HEROES</h1><small>MISI MUZIK • TAHUN 1 PROAKTIF</small></div>
+    </div>
+    <div class="header-stats">
+      <div class="stat-pill" aria-label="Jumlah mata pengalaman"><span>⚡</span><span id="xpTotal">0 XP</span></div>
+      <div class="stat-pill" aria-label="Jumlah bintang"><span>⭐</span><span id="starTotal">0</span></div>
+      <button class="teacher-shortcut" id="teacherShortcut" type="button">🧑‍🏫 Guru</button>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="intro">
+      <div><h2>Hai, Wira Muzik! <span aria-hidden="true">🌟</span></h2><p>Ikut peta misi, kumpul bintang dan jadilah wira rentak.</p></div>
+      <div class="progress-chip">Kemajuan: <span id="progressText">0 / 4 misi</span></div>
+    </section>
+
+    <div class="layout">
+      <aside class="card map-card" aria-label="Peta misi">
+        <div class="section-title"><h3>🗺️ Peta Pengembaraan</h3><span class="tiny-label">Pilih misi</span></div>
+        <p class="map-hint">Selesaikan misi satu demi satu untuk membuka laluan seterusnya.</p>
+        <div class="mission-list" id="missionMap"></div>
+        <div class="rewards">
+          <h4>🏅 Koleksi ganjaran</h4>
+          <div class="badge-row" id="badgeRow"></div>
+        </div>
+        <div id="teacherToolsSlot"></div>
+      </aside>
+
+      <section class="card play-card" id="playCard" aria-live="polite"></section>
+    </div>
+  </main>
+
+  <footer class="footer"><span>Direka untuk dimainkan bersama guru dan rakan sekelas.</span><button type="button" id="resetProgress">Mula semula kemajuan</button></footer>
+
+  <script>
+    (() => {
+      const STORE_KEY = 'negaraku-rhythm-heroes-v1';
+      const missions = [
+        { id: 1, icon: '🥁', title: 'Pintu Rentak', subtitle: 'Tepuk dan ketuk ikut corak', kind: 'rhythm', badge: '🥁', reward: 'Lencana Penjaga Rentak', desc: 'Perhatikan corak. Kemudian ulang dengan tepuk dan ketuk.' },
+        { id: 2, icon: '🧩', title: 'Jejak Lirik', subtitle: 'Susun petikan yang guru beri', kind: 'order', badge: '🧩', reward: 'Lencana Penyusun Lirik', desc: 'Susun petikan lirik mengikut urutan yang dipelajari bersama guru.' },
+        { id: 3, icon: '🎶', title: 'Gua Gema', subtitle: 'Ulang corak muzik yang mencabar', kind: 'rhythm2', badge: '🎶', reward: 'Pingat Gema Hebat', desc: 'Dengar dan ingat corak yang lebih panjang untuk meneruskan perjalanan.' },
+        { id: 4, icon: '🏆', title: 'Pentas Juara', subtitle: 'Susun, baca dan raikan kejayaan', kind: 'final', badge: '👑', reward: 'Mahkota Wira Negaraku', desc: 'Susun petikan, berlatih dengan kiraan dan tunjukkan semangat wira.' }
+      ];
+      const patterns = {
+        1: [ ['clap','tap','clap'], ['tap','clap','tap'], ['clap','clap','tap','clap'] ],
+        3: [ ['clap','tap','rest','clap'], ['tap','tap','clap','rest'], ['clap','tap','clap','tap','clap'] ]
+      };
+      const symbols = { clap:'👏', tap:'🥁', rest:'🤫' };
+      const names = { clap:'Tepuk', tap:'Ketuk', rest:'Senyap' };
+      const saved = readSaved();
+      let state = {
+        completed: saved.completed || {},
+        fragments: Array.isArray(saved.fragments) ? saved.fragments : []
+      };
+      let selectedId = 0;
+      let game = null;
+      const $ = (id) => document.getElementById(id);
+
+      function readSaved() {
+        try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; }
+        catch { return {}; }
+      }
+      function persist() {
+        try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+        catch { /* The game still works if browser storage is unavailable. */ }
+      }
+      function isUnlocked(id) { return id === 1 || Boolean(state.completed[id - 1]); }
+      function bestScore(id) { return Number(state.completed[id]?.score || 0); }
+      function totalXP() { return Object.values(state.completed).reduce((n, item) => n + Number(item.score || 0), 0); }
+      function totalStars() { return Object.values(state.completed).reduce((n, item) => n + Number(item.stars || 0), 0); }
+      function completedCount() { return Object.keys(state.completed).length; }
+      function esc(text) {
+        return String(text).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      }
+      function render() {
+        $('xpTotal').textContent = `${totalXP()} XP`;
+        $('starTotal').textContent = totalStars();
+        $('progressText').textContent = `${completedCount()} / 4 misi`;
+        if (!$('teacherToolsSlot').innerHTML) {
+          $('teacherToolsSlot').innerHTML = teacherEditor();
+          bindTeacherEditor();
+        }
+        renderMap();
+        renderBadges();
+        if (!selectedId) renderWelcome();
+        else if (game && game.finished) renderWin();
+        else if (game && game.started) renderActive();
+        else renderMissionIntro(selectedId);
+      }
+      function renderMap() {
+        $('missionMap').innerHTML = missions.map((m) => {
+          const open = isUnlocked(m.id), done = Boolean(state.completed[m.id]);
+          const selected = m.id === selectedId;
+          const status = done ? '✅' : open ? '▶️' : '🔒';
+          return `<button class="map-node ${done ? 'complete' : ''} ${selected ? 'selected' : ''}" type="button" data-mission="${m.id}" ${open ? '' : 'disabled'} aria-label="Misi ${m.id}: ${esc(m.title)}${open ? '' : ', dikunci'}">
+            <span class="node-icon">${m.icon}</span><span class="node-text"><strong>${m.id}. ${esc(m.title)}</strong><small>${esc(m.subtitle)}${done ? ` · ${bestScore(m.id)} XP` : ''}</small></span><span class="node-status">${status}</span>
+          </button>`;
+        }).join('');
+        $('missionMap').querySelectorAll('[data-mission]').forEach((button) => button.addEventListener('click', () => openMission(Number(button.dataset.mission))));
+      }
+      function renderBadges() {
+        $('badgeRow').innerHTML = missions.map((m) => `<span class="badge ${state.completed[m.id] ? 'earned' : ''}" title="${esc(m.reward)}${state.completed[m.id] ? ' · diperoleh' : ' · belum diperoleh'}" aria-label="${esc(m.reward)}${state.completed[m.id] ? ', diperoleh' : ', belum diperoleh'}">${m.badge}</span>`).join('');
+      }
+      function renderWelcome() {
+        $('playCard').innerHTML = `<div class="panel-top"><div class="eyebrow">MISI BERMULA SEKARANG</div><h3>Selamat datang ke dunia rentak!</h3><p>Empat misi menanti. Kumpul XP, buka laluan baharu dan dapatkan ganjaran wira.</p></div>
+          <div class="panel-body">
+            <div class="welcome-art"><div class="hero-emoji" aria-hidden="true">🦸‍♀️</div><div><strong>Hai, Wira Muzik!</strong><p>Tekan misi pertama pada peta. Kamu boleh bermain dengan sentuhan atau tetikus.</p></div></div>
+            <div class="how-grid"><div class="how-item"><b>🎵 Main</b><span>Ikut cabaran rentak dan susun petikan bersama guru.</span></div><div class="how-item"><b>⚡ Kumpul XP</b><span>Setiap misi yang berjaya memberi mata pengalaman.</span></div><div class="how-item"><b>🔓 Buka</b><span>Selesaikan misi untuk membuka tahap seterusnya.</span></div></div>
+            <div class="note"><strong>Nota guru:</strong> Permainan tidak memaparkan lirik lagu. Untuk misi susunan, guru boleh tampal petikan yang dibekalkan dalam ruang “Tetapan Guru”.</div>
+            <button class="btn btn-primary" id="beginButton" type="button">🗺️ Lihat misi pertama</button>
+          </div>`;
+        $('beginButton').addEventListener('click', () => openMission(1));
+      }
+      function teacherEditor() {
+        const current = state.fragments.join('\n');
+        return `<details class="teacher-box" id="teacherBox"><summary>🧑‍🏫 Tetapan Guru · Masukkan petikan</summary><div class="teacher-content">
+          <p>Tampal petikan yang disediakan guru, satu petikan pada setiap baris dan dalam urutan yang betul. Sekurang-kurangnya dua baris diperlukan. Kandungan disimpan pada peranti ini sahaja.</p>
+          <textarea id="fragmentInput" aria-label="Petikan lirik daripada guru" placeholder="[Petikan guru 1]\n[Petikan guru 2]\n[Petikan guru 3]">${esc(current)}</textarea>
+          <div class="teacher-actions"><button class="btn btn-soft" id="saveFragments" type="button">Simpan petikan</button><span class="teacher-status" id="teacherStatus">${state.fragments.length ? `${state.fragments.length} petikan disimpan pada peranti ini.` : 'Belum ada petikan disimpan.'}</span></div>
+        </div></details>`;
+      }
+      function bindTeacherEditor() {
+        const save = $('saveFragments');
+        if (!save) return;
+        save.addEventListener('click', () => {
+          const fragments = $('fragmentInput').value.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+          if (fragments.length < 2) {
+            $('teacherStatus').textContent = 'Masukkan sekurang-kurangnya dua petikan, satu pada setiap baris.';
+            $('teacherStatus').style.color = '#b64b3c';
+            return;
+          }
+          state.fragments = fragments;
+          persist();
+          $('teacherStatus').textContent = `${fragments.length} petikan disimpan pada peranti ini.`;
+          $('teacherStatus').style.color = '#168466';
+          if ([2,4].includes(selectedId) && (!game || !game.started)) renderMissionIntro(selectedId);
+        });
+      }
+      function openTeacher() {
+        const box = $('teacherBox');
+        if (box) { box.open = true; box.scrollIntoView({behavior:'smooth', block:'center'}); }
+      }
+      function openMission(id) {
+        if (!isUnlocked(id)) return;
+        selectedId = id;
+        game = null;
+        render();
+        if (window.matchMedia('(max-width: 760px)').matches) $('playCard').scrollIntoView({behavior:'smooth', block:'start'});
+      }
+      function renderMissionIntro(id) {
+        const m = missions.find((item) => item.id === id);
+        const needsFragments = m.kind === 'order' || m.kind === 'final';
+        const ready = !needsFragments || state.fragments.length >= 2;
+        const prior = state.completed[id];
+        let callout = needsFragments
+          ? `<div class="note">Susun petikan mengikut urutan yang guru ajar. Jika belum dimasukkan, buka <button type="button" class="inline-link" id="openTeacherInline" style="border:0;background:none;color:#4b54b8;font-weight:900;text-decoration:underline;padding:0">Tetapan Guru</button> dahulu.</div>`
+          : `<div class="note">Kamu boleh cuba semula jika tersilap. Lihat corak dan ulang menggunakan butang sentuh yang besar.</div>`;
+        $('playCard').innerHTML = `<div class="panel-top"><div class="eyebrow">MISI ${String(id).padStart(2,'0')} ${prior ? '· SUDAH DIBUKA' : '· LALUAN DIBUKA'}</div><h3>${m.icon} ${esc(m.title)}</h3><p>${esc(m.desc)}</p></div>
+          <div class="panel-body"><div class="welcome-art"><div class="hero-emoji">${m.icon}</div><div><strong>${esc(m.subtitle)}</strong><p>${id === 4 ? 'Misi terakhir! Susun petikan dan raikan latihan kamu.' : 'Sedia untuk cabaran ini? Ikut arahan pada skrin.'}</p></div></div>
+            ${callout}${prior ? `<div class="locked-hint">Rekod terbaik kamu: <strong>${prior.score} XP</strong> · ${'⭐'.repeat(prior.stars)}${'☆'.repeat(3-prior.stars)}</div>` : ''}
+            <div class="panel-actions"><button class="btn btn-primary" id="startMission" type="button" ${ready ? '' : 'disabled'}>${prior ? '🔁 Main semula' : '🚀 Mula misi'}</button></div>
+          </div>`;
+        $('startMission').addEventListener('click', () => startMission(id));
+        const inline = $('openTeacherInline');
+        if (inline) inline.addEventListener('click', openTeacher);
+      }
+      function startMission(id) {
+        const m = missions.find((item) => item.id === id);
+        if ((m.kind === 'order' || m.kind === 'final') && state.fragments.length < 2) { openTeacher(); return; }
+        game = { missionId:id, started:true, round:0, points:0, tries:0, roundTries:0, input:[], showPattern:true, feedback:'', order:m.kind === 'order' || m.kind === 'final' ? shuffle(state.fragments) : [], orderTries:0, orderChecked:false, orderCorrect:false, performanceDone:false };
+        render();
+      }
+      function shuffle(items) {
+        const result = [...items];
+        for (let i=result.length-1; i>0; i--) { const j=Math.floor(Math.random()*(i+1)); [result[i],result[j]]=[result[j],result[i]]; }
+        if (result.length > 1 && result.every((item,index) => item === items[index])) [result[0],result[1]]=[result[1],result[0]];
+        return result;
+      }
+      function currentPattern() {
+        const list = game.missionId === 1 ? patterns[1] : patterns[3];
+        return list[game.round % list.length];
+      }
+      function renderActive() {
+        const m = missions.find((item) => item.id === game.missionId);
+        if (m.kind === 'rhythm' || m.kind === 'rhythm2') renderRhythm(m);
+        else if (m.kind === 'order') renderOrder(m, false);
+        else renderOrder(m, true);
+      }
+      function renderRhythm(m) {
+        const target = currentPattern();
+        const sequence = game.input.map((key) => symbols[key]);
+        const roundCount = patterns[game.missionId === 1 ? 1 : 3].length;
+        const dots = Array.from({length:roundCount}, (_,i) => `<span class="round-dot ${i < game.round ? 'done' : i === game.round ? 'current' : ''}"></span>`).join('');
+        const display = game.showPattern ? target.map((key) => `<span class="pattern-token" aria-label="${names[key]}">${symbols[key]}</span>`).join('') : target.map(() => `<span class="pattern-token blank">?</span>`).join('');
+        const typed = sequence.length ? sequence.map((icon) => `<span class="pattern-token">${icon}</span>`).join('') : `<span style="color:#a1a8ba;font-size:13px">${game.showPattern ? 'Lihat corak di atas dahulu.' : 'Tekan butang ikut corak.'}</span>`;
+        const info = game.missionId === 1 ? 'Ingat urutan ikon. Sorokkan corak, kemudian ulang.' : 'Cabaran bertambah panjang. Ambil masa untuk ingat corak.';
+        $('playCard').innerHTML = `<div class="panel-top"><div class="eyebrow">MISI ${String(m.id).padStart(2,'0')} · CABARAN ${game.round+1} DARIPADA ${roundCount}</div><h3>${m.icon} ${esc(m.title)}</h3><p>${info}</p></div>
+          <div class="panel-body"><div class="mission-meta"><div class="round-dots" aria-label="Kemajuan pusingan">${dots}</div><span class="score-mini">⚡ ${game.points} XP</span></div>
+            <div class="challenge-box"><h4>${game.showPattern ? 'Lihat corak rentak' : 'Giliran kamu!'}</h4><p>${game.showPattern ? 'Sebut nama ikon perlahan-lahan supaya mudah ingat.' : 'Ulang ikon dalam urutan yang sama.'}</p>
+              <div class="pattern" aria-label="Corak sasaran">${display}</div>
+              ${game.showPattern ? `<button class="btn btn-yellow" id="hidePattern" type="button">🙈 Sorok corak & cuba</button>` : `<div class="pattern" aria-label="Pilihan kamu">${typed}</div>
+                <div class="action-row"><button class="action-btn" data-action="clap" type="button"><span>👏</span>Tepuk</button><button class="action-btn" data-action="tap" type="button"><span>🥁</span>Ketuk</button><button class="action-btn" data-action="rest" type="button"><span>🤫</span>Senyap</button></div>
+                <div class="panel-actions"><button class="btn btn-soft" id="undoTap" type="button" ${game.input.length ? '' : 'disabled'}>↩ Padam satu</button><button class="btn btn-soft" id="showPattern" type="button">👀 Lihat semula</button><button class="btn btn-primary" id="checkRhythm" type="button" ${game.input.length === target.length ? '' : 'disabled'}>Semak ✅</button></div>`}
+              <div class="result-message ${game.feedbackType || ''}" role="status">${esc(game.feedback || '')}</div>
+          </div>
+          </div>`;
+        if (game.showPattern) $('hidePattern').addEventListener('click', () => { game.showPattern=false; game.input=[]; game.feedback=''; render(); });
+        else {
+          $('playCard').querySelectorAll('[data-action]').forEach((button) => button.addEventListener('click', () => addAction(button.dataset.action)));
+          $('undoTap').addEventListener('click', () => { game.input.pop(); render(); });
+          $('showPattern').addEventListener('click', () => { game.showPattern=true; game.input=[]; render(); });
+          $('checkRhythm').addEventListener('click', checkRhythm);
+        }
+      }
+      function addAction(key) {
+        if (game.input.length >= currentPattern().length) return;
+        game.input.push(key); game.feedback=''; game.feedbackType=''; render();
+      }
+      function checkRhythm() {
+        if (game.finishing) return;
+        const target = currentPattern();
+        game.roundTries++;
+        game.tries++;
+        if (game.input.join('|') === target.join('|')) {
+          const points = game.roundTries === 1 ? 50 : game.roundTries === 2 ? 35 : 25;
+          game.points += points;
+          game.feedback = `Bagus! Corak kamu tepat. +${points} XP`;
+          game.feedbackType = 'good';
+          if (game.round + 1 >= patterns[game.missionId === 1 ? 1 : 3].length) {
+            game.finishing = true;
+            setTimeout(() => completeMission(game.missionId, game.points, game.tries <= 3 ? 3 : game.tries <= 5 ? 2 : 1), 650);
+          } else {
+            game.round++;
+            game.roundTries=0;
+            game.input=[];
+            game.showPattern=true;
+            render();
+          }
+        } else {
+          game.input=[];
+          game.feedback = 'Hampir tepat! Cuba lagi, Wira. Kamu boleh lihat semula corak.';
+          game.feedbackType = 'try';
+          render();
+        }
+      }
+      function renderOrder(m, isFinal) {
+        if (game.orderCorrect && isFinal && !game.performanceDone) { renderPerformance(m); return; }
+        const rows = game.order.map((fragment,index) => `<li class="order-row"><span class="order-num">${index+1}</span><span class="order-text">${esc(fragment)}</span><button class="move-btn" data-move="${index-1}" type="button" aria-label="Alihkan ke atas" ${index===0?'disabled':''}>↑</button><button class="move-btn" data-move="${index+1}" type="button" aria-label="Alihkan ke bawah" ${index===game.order.length-1?'disabled':''}>↓</button></li>`).join('');
+        const marks = game.order.map((_,index) => `<span class="round-dot ${game.orderChecked && game.order[index] === state.fragments[index] ? 'done' : game.orderChecked ? 'current' : ''}"></span>`).join('');
+        const feedback = game.feedback || (isFinal ? 'Susun dahulu. Kemudian berlatih dengan kiraan.' : 'Alihkan petikan ke atas atau ke bawah untuk menyusunnya.');
+        $('playCard').innerHTML = `<div class="panel-top"><div class="eyebrow">MISI ${String(m.id).padStart(2,'0')} · ${isFinal ? 'CABARAN AKHIR' : 'TEKA-TEKI SUSUNAN'}</div><h3>${m.icon} ${esc(m.title)}</h3><p>${isFinal ? 'Susun petikan, baca dengan rentak dan raikan usaha kamu.' : 'Susun petikan mengikut urutan yang dipelajari bersama guru.'}</p></div>
+          <div class="panel-body"><div class="mission-meta"><div class="round-dots" aria-label="Petikan lirik">${marks}</div><span class="score-mini">${game.order.length} petikan</span></div>
+            <div class="challenge-box"><h4>🧩 Susun petikan</h4><p>Gunakan anak panah besar untuk mengubah urutan.</p><ol class="order-list">${rows}</ol>
+              <div class="panel-actions"><button class="btn btn-primary" id="checkOrder" type="button">Semak susunan ✅</button></div><div class="result-message ${game.feedbackType || ''}" role="status">${esc(feedback)}</div>
+            </div>
+          </div>`;
+        // data-move stores the destination position.
+        $('playCard').querySelectorAll('.order-row').forEach((row,index) => row.querySelectorAll('[data-move]').forEach((button) => button.addEventListener('click', () => moveFragment(index, Number(button.dataset.move)))));
+        $('checkOrder').addEventListener('click', () => checkOrder(isFinal));
+      }
+      function moveFragment(from, to) {
+        if (to < 0 || to >= game.order.length || from === to) return;
+        const [item] = game.order.splice(from,1); game.order.splice(to,0,item);
+        game.orderChecked=false; game.feedback=''; game.feedbackType=''; render();
+      }
+      function checkOrder(isFinal) {
+        if (game.finishing) return;
+        game.orderTries++;
+        game.orderChecked=true;
+        game.orderCorrect=game.order.every((fragment,index) => fragment === state.fragments[index]);
+        if (!game.orderCorrect) {
+          const correct = game.order.filter((fragment,index) => fragment === state.fragments[index]).length;
+          game.feedback = `${correct} daripada ${game.order.length} petikan sudah di tempat yang betul. Cuba lagi!`;
+          game.feedbackType='try';
+          render();
+          return;
+        }
+        game.feedback='Tepat! Semua petikan sudah mengikut urutan.';
+        game.feedbackType='good';
+        if (isFinal) { render(); return; }
+        const score = game.orderTries === 1 ? 150 : game.orderTries === 2 ? 125 : 100;
+        game.finishing = true;
+        setTimeout(() => completeMission(2,score,game.orderTries === 1 ? 3 : game.orderTries === 2 ? 2 : 1), 700);
+        render();
+      }
+      function renderPerformance(m) {
+        $('playCard').innerHTML = `<div class="panel-top"><div class="eyebrow">MISI 04 · PENTAS AKHIR</div><h3>🎤 Latihan Wira Muzik</h3><p>Petikan sudah tersusun. Sekarang ikut kiraan dan baca bersama guru.</p></div>
+          <div class="panel-body"><div class="challenge-box"><div style="font-size:45px;margin:4px 0 8px">🌟</div><h4>Rentak dan sebut dengan yakin!</h4><p>Tekan butang untuk mendengar kiraan muzik, kemudian baca petikan kuat-kuat bersama guru atau rakan.</p><div class="pattern"><span class="pattern-token">1</span><span class="pattern-token">2</span><span class="pattern-token">3</span><span class="pattern-token">4</span></div>
+              <button class="btn btn-yellow" id="playCount" type="button">🔔 Mainkan kiraan 1–2–3–4</button><div class="result-message" id="countStatus" role="status"></div>
+              <div class="performance"><h4>🎵 Persembahan kamu</h4><p>Baca petikan yang telah disusun dengan suara jelas dan penuh semangat. Minta guru atau rakan dengar.</p><button class="btn btn-primary" id="finishPerformance" type="button">Saya sudah berlatih! 🏆</button></div>
+            </div></div>`;
+        $('playCount').addEventListener('click', playCountIn);
+        $('finishPerformance').addEventListener('click', () => {
+          const score = game.orderTries === 1 ? 250 : game.orderTries === 2 ? 220 : 190;
+          completeMission(4,score,game.orderTries === 1 ? 3 : game.orderTries <= 3 ? 2 : 1);
+        });
+      }
+      function playCountIn() {
+        const status = $('countStatus');
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) { status.textContent = 'Kiraan: satu, dua, tiga, empat! Sekarang baca bersama guru.'; return; }
+        try {
+          const ctx = new AudioCtx();
+          [0,1,2,3].forEach((i) => {
+            const osc = ctx.createOscillator(), gain = ctx.createGain();
+            osc.frequency.value = i === 0 ? 660 : 520;
+            gain.gain.setValueAtTime(0.0001, ctx.currentTime + i*.48);
+            gain.gain.exponentialRampToValueAtTime(0.13, ctx.currentTime + i*.48 + .02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + i*.48 + .18);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(ctx.currentTime + i*.48); osc.stop(ctx.currentTime + i*.48 + .2);
+          });
+          status.textContent = 'Dengar kiraannya: satu, dua, tiga, empat!';
+          setTimeout(() => ctx.close(), 2400);
+        } catch { status.textContent = 'Kiraan: satu, dua, tiga, empat! Sekarang baca bersama guru.'; }
+      }
+      function completeMission(id, score, stars) {
+        const old = state.completed[id];
+        state.completed[id] = { score:Math.max(score,Number(old?.score||0)), stars:Math.max(stars,Number(old?.stars||0)) };
+        persist();
+        game = { missionId:id, finished:true, lastScore:score, stars:state.completed[id].stars };
+        render();
+      }
+      function renderWin() {
+        const id = game.missionId;
+        const m = missions.find((item) => item.id === id);
+        const allDone = missions.every((item) => state.completed[item.id]);
+        $('playCard').innerHTML = `<div class="panel-top"><div class="eyebrow">${allDone ? 'SEMUA MISI SELESAI' : 'MISI SELESAI'}</div><h3>${allDone ? '🏆 Wira Negaraku!' : `${m.icon} Misi berjaya!`}</h3><p>${allDone ? 'Kamu sudah menamatkan seluruh pengembaraan Rhythm Heroes!' : `Kamu berjaya menyelesaikan “${esc(m.title)}”. Laluan baharu sudah terbuka.`}</p></div>
+          <div class="panel-body"><div class="win-screen"><div class="win-emoji">${allDone ? '👑' : m.badge}</div><h3>${allDone ? 'Tahniah, Wira!' : 'Hebat sekali!'}</h3><p>${allDone ? 'Semua rentak dan petikan sudah kamu kuasai. Jemput guru dan rakan meraikan usaha kamu!' : `Ganjaran diperoleh: ${esc(m.reward)}. Teruskan pengembaraan untuk buka misi seterusnya.`}</p>
+            <div class="win-score"><span>⚡ +${game.lastScore} XP</span><span class="stars">${'⭐'.repeat(game.stars)}${'☆'.repeat(3-game.stars)}</span></div>
+            ${allDone ? `<div class="final-banner">🌟 Semua misi selesai · ${totalXP()} XP terkumpul · ${totalStars()} bintang!<br>Wira Muzik, kamu memang hebat.</div>` : ''}
+            <div class="panel-actions"><button class="btn btn-primary" id="continueGame" type="button">${allDone ? '🗺️ Lihat peta lagi' : '➡️ Teruskan'}</button><button class="btn btn-soft" id="replayGame" type="button">🔁 Main semula</button></div>
+          </div></div>`;
+        $('continueGame').addEventListener('click', () => { game=null; selectedId = allDone ? 0 : Math.min(4,id+1); render(); if (!allDone) $('playCard').scrollIntoView({behavior:'smooth',block:'start'}); });
+        $('replayGame').addEventListener('click', () => startMission(id));
+      }
+      $('teacherShortcut').addEventListener('click', openTeacher);
+      $('resetProgress').addEventListener('click', () => {
+        if (!window.confirm('Padam semua XP, bintang dan misi yang telah selesai? Petikan guru akan kekal.')) return;
+        state.completed = {}; persist(); selectedId=0; game=null; render();
+      });
+      render();
+    })();
+  </script>
+</body>
+</html>
+
