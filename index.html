@@ -523,7 +523,7 @@
       function startMission(id) {
         const m = missions.find((item) => item.id === id);
         if ((m.kind === 'order' || m.kind === 'final') && state.fragments.length < 2) { openTeacher(); return; }
-        game = { missionId:id, started:true, round:0, points:0, tries:0, roundTries:0, input:[], showPattern:true, feedback:'', order:m.kind === 'order' || m.kind === 'final' ? shuffle(state.fragments) : [], orderTries:0, orderChecked:false, orderCorrect:false, performanceDone:false };
+        game = { missionId:id, started:true, round:0, points:0, tries:0, roundTries:0, input:[], showPattern:true, feedback:'', order:m.kind === 'order' || m.kind === 'final' ? shuffle(state.fragments) : [], orderTries:0, orderChecked:false, orderCorrect:false, orderDone:false, orderLocked:false, orderCorrectCount:0, orderPartialScore:0, orderPartialStars:0, finalScore:0, finalStars:0, finalMessage:'', roundLocked:false, failedRounds:0, correctBeatCount:0, totalBeatCount:0, performanceDone:false };
         render();
       }
       function shuffle(items) {
@@ -546,115 +546,199 @@
         const target = currentPattern();
         const sequence = game.input.map((key) => symbols[key]);
         const roundCount = patterns[game.missionId === 1 ? 1 : 3].length;
-        const dots = Array.from({length:roundCount}, (_,i) => `<span class="round-dot ${i < game.round ? 'done' : i === game.round ? 'current' : ''}"></span>`).join('');
-        const display = game.showPattern ? target.map((key) => `<span class="pattern-token" aria-label="${names[key]}">${symbols[key]}</span>`).join('') : target.map(() => `<span class="pattern-token blank">?</span>`).join('');
-        const typed = sequence.length ? sequence.map((icon) => `<span class="pattern-token">${icon}</span>`).join('') : `<span style="color:#a1a8ba;font-size:13px">${game.showPattern ? 'Lihat corak di atas dahulu.' : 'Tekan butang ikut corak.'}</span>`;
+        const dots = Array.from({length:roundCount}, (_,i) => '<span class="round-dot ' + (i < game.round ? 'done' : i === game.round ? 'current' : '') + '"></span>').join('');
+        const display = game.showPattern
+          ? target.map((key) => '<span class="pattern-token" aria-label="' + names[key] + '">' + symbols[key] + '</span>').join('')
+          : target.map(() => '<span class="pattern-token blank">?</span>').join('');
+        const typed = sequence.length
+          ? sequence.map((icon) => '<span class="pattern-token">' + icon + '</span>').join('')
+          : '<span style="color:#a1a8ba;font-size:13px">' + (game.showPattern ? 'Lihat corak di atas dahulu.' : 'Tekan butang ikut corak.') + '</span>';
         const info = game.missionId === 1 ? 'Ingat urutan ikon. Sorokkan corak, kemudian ulang.' : 'Cabaran bertambah panjang. Ambil masa untuk ingat corak.';
-        $('playCard').innerHTML = `<div class="panel-top"><div class="eyebrow">MISI ${String(m.id).padStart(2,'0')} · CABARAN ${game.round+1} DARIPADA ${roundCount}</div><h3>${m.icon} ${esc(m.title)}</h3><p>${info}</p></div>
-          <div class="panel-body"><div class="mission-meta"><div class="round-dots" aria-label="Kemajuan pusingan">${dots}</div><span class="score-mini">⚡ ${game.points} XP</span></div>
-            <div class="challenge-box"><h4>${game.showPattern ? 'Lihat corak rentak' : 'Giliran kamu!'}</h4><p>${game.showPattern ? 'Sebut nama ikon perlahan-lahan supaya mudah ingat.' : 'Ulang ikon dalam urutan yang sama.'}</p>
-              <div class="pattern" aria-label="Corak sasaran">${display}</div>
-              ${game.showPattern ? `<button class="btn btn-yellow" id="hidePattern" type="button">🙈 Sorok corak & cuba</button>` : `<div class="pattern" aria-label="Pilihan kamu">${typed}</div>
-                <div class="action-row"><button class="action-btn" data-action="clap" type="button"><span>👏</span>Tepuk</button><button class="action-btn" data-action="tap" type="button"><span>🥁</span>Ketuk</button><button class="action-btn" data-action="rest" type="button"><span>🤫</span>Senyap</button></div>
-                <div class="panel-actions"><button class="btn btn-soft" id="undoTap" type="button" ${game.input.length ? '' : 'disabled'}>↩ Padam satu</button><button class="btn btn-soft" id="showPattern" type="button">👀 Lihat semula</button><button class="btn btn-primary" id="checkRhythm" type="button" ${game.input.length === target.length ? '' : 'disabled'}>Semak ✅</button></div>`}
-              <div class="result-message ${game.feedbackType || ''}" role="status">${esc(game.feedback || '')}</div>
-          </div>
-          </div>`;
-        if (game.showPattern) $('hidePattern').addEventListener('click', () => { game.showPattern=false; game.input=[]; game.feedback=''; render(); });
+        let controls = '';
+        if (game.showPattern) {
+          controls = '<button class="btn btn-yellow" id="hidePattern" type="button">🙈 Sorok corak &amp; cuba</button>';
+        } else if (game.roundLocked) {
+          controls = '<div class="pattern" aria-label="Pilihan kamu">' + typed + '</div><div class="panel-actions"><button class="btn btn-primary" id="nextRhythm" type="button">➡️ ' + (game.round + 1 >= roundCount ? 'Tamatkan misi' : 'Cabaran seterusnya') + '</button></div>';
+        } else {
+          controls = '<div class="pattern" aria-label="Pilihan kamu">' + typed + '</div>' +
+            '<div class="action-row"><button class="action-btn" data-action="clap" type="button"><span>👏</span>Tepuk</button><button class="action-btn" data-action="tap" type="button"><span>🥁</span>Ketuk</button><button class="action-btn" data-action="rest" type="button"><span>🤫</span>Senyap</button></div>' +
+            '<div class="panel-actions"><button class="btn btn-soft" id="undoTap" type="button" ' + (game.input.length ? '' : 'disabled') + '>↩ Padam satu</button><button class="btn btn-soft" id="showPattern" type="button">👀 Lihat semula</button><button class="btn btn-primary" id="checkRhythm" type="button" ' + (game.input.length === target.length ? '' : 'disabled') + '>Semak ✅</button></div>';
+        }
+        const hint = game.showPattern
+          ? 'Sebut nama ikon perlahan-lahan supaya mudah ingat.'
+          : 'Ulang ikon dalam urutan yang sama. Cubaan ' + Math.min(game.roundTries + 1, 2) + ' daripada 2.';
+        $('playCard').innerHTML =
+          '<div class="panel-top"><div class="eyebrow">MISI ' + String(m.id).padStart(2,'0') + ' · CABARAN ' + (game.round+1) + ' DARIPADA ' + roundCount + '</div><h3>' + m.icon + ' ' + esc(m.title) + '</h3><p>' + info + '</p></div>' +
+          '<div class="panel-body"><div class="mission-meta"><div class="round-dots" aria-label="Kemajuan pusingan">' + dots + '</div><span class="score-mini">⚡ ' + game.points + ' XP</span></div>' +
+            '<div class="challenge-box"><h4>' + (game.showPattern ? 'Lihat corak rentak' : 'Giliran kamu!') + '</h4><p>' + hint + '</p><div class="pattern" aria-label="Corak sasaran">' + display + '</div>' +
+              controls + '<div class="result-message ' + (game.feedbackType || '') + '" role="status">' + esc(game.feedback || '') + '</div></div></div>';
+        if (game.showPattern) $('hidePattern').addEventListener('click', () => { game.showPattern=false; game.input=[]; game.feedback=''; game.feedbackType=''; render(); });
+        else if (game.roundLocked) $('nextRhythm').addEventListener('click', advanceRhythmRound);
         else {
           $('playCard').querySelectorAll('[data-action]').forEach((button) => button.addEventListener('click', () => addAction(button.dataset.action)));
-          $('undoTap').addEventListener('click', () => { game.input.pop(); render(); });
-          $('showPattern').addEventListener('click', () => { game.showPattern=true; game.input=[]; render(); });
+          $('undoTap').addEventListener('click', () => { if (!game.roundLocked) { game.input.pop(); render(); } });
+          $('showPattern').addEventListener('click', () => { if (!game.roundLocked) { game.showPattern=true; game.input=[]; render(); } });
           $('checkRhythm').addEventListener('click', checkRhythm);
         }
       }
       function addAction(key) {
-        if (game.input.length >= currentPattern().length) return;
+        if (game.roundLocked || game.input.length >= currentPattern().length) return;
         playSfx(key);
         game.input.push(key); game.feedback=''; game.feedbackType=''; render();
       }
+      function advanceRhythmRound() {
+        const roundCount = patterns[game.missionId === 1 ? 1 : 3].length;
+        if (game.round + 1 >= roundCount) {
+          const maxScore = roundCount * 50;
+          const accuracy = maxScore ? game.points / maxScore : 0;
+          const stars = accuracy >= 0.99 && game.tries <= roundCount ? 3 : accuracy >= 0.5 ? 2 : accuracy > 0 ? 1 : 0;
+          const message = game.failedRounds
+            ? 'Markah dikira daripada ' + game.correctBeatCount + ' daripada ' + game.totalBeatCount + ' ikon rentak yang tepat.'
+            : '';
+          game.finishing = true;
+          completeMission(game.missionId, game.points, stars, message);
+          return;
+        }
+        game.round++;
+        game.roundTries=0;
+        game.roundLocked=false;
+        game.input=[];
+        game.showPattern=true;
+        game.feedback='';
+        game.feedbackType='';
+        render();
+      }
       function checkRhythm() {
-        if (game.finishing) return;
+        if (game.finishing || game.roundLocked) return;
         const target = currentPattern();
         game.roundTries++;
         game.tries++;
+        const correctCount = target.reduce((count,key,index) => count + (game.input[index] === key ? 1 : 0), 0);
         if (game.input.join('|') === target.join('|')) {
           playSfx('correct');
-          const points = game.roundTries === 1 ? 50 : game.roundTries === 2 ? 35 : 25;
+          const points = game.roundTries === 1 ? 50 : 35;
           game.points += points;
-          game.feedback = `Bagus! Corak kamu tepat. +${points} XP`;
+          game.correctBeatCount += target.length;
+          game.totalBeatCount += target.length;
+          game.feedback = 'Bagus! Corak kamu tepat. +' + points + ' XP';
           game.feedbackType = 'good';
+          game.showPattern = false;
           if (game.round + 1 >= patterns[game.missionId === 1 ? 1 : 3].length) {
-            game.finishing = true;
-            setTimeout(() => completeMission(game.missionId, game.points, game.tries <= 3 ? 3 : game.tries <= 5 ? 2 : 1), 650);
+            advanceRhythmRound();
           } else {
             game.round++;
             game.roundTries=0;
+            game.roundLocked=false;
             game.input=[];
             game.showPattern=true;
             render();
           }
-        } else {
+        } else if (game.roundTries === 1) {
           playSfx('try');
           game.input=[];
-          game.feedback = 'Hampir tepat! Cuba lagi, Wira. Kamu boleh lihat semula corak.';
+          game.feedback = 'Belum tepat. Kamu boleh ubah jawapan pada cubaan kedua.';
+          game.feedbackType = 'try';
+          render();
+        } else {
+          playSfx('try');
+          const points = Math.round(50 * correctCount / target.length);
+          game.points += points;
+          game.failedRounds++;
+          game.correctBeatCount += correctCount;
+          game.totalBeatCount += target.length;
+          game.roundLocked=true;
+          game.feedback = correctCount + ' daripada ' + target.length + ' ikon tepat. +' + points + ' XP daripada ikon yang tepat sahaja.';
           game.feedbackType = 'try';
           render();
         }
       }
       function renderOrder(m, isFinal) {
-        if (game.orderCorrect && isFinal && !game.performanceDone) { renderPerformance(m); return; }
-        const rows = game.order.map((fragment,index) => `<li class="order-row"><span class="order-num">${index+1}</span><span class="order-text">${esc(fragment)}</span><button class="move-btn" data-move="${index-1}" type="button" aria-label="Alihkan ke atas" ${index===0?'disabled':''}>↑</button><button class="move-btn" data-move="${index+1}" type="button" aria-label="Alihkan ke bawah" ${index===game.order.length-1?'disabled':''}>↓</button></li>`).join('');
-        const marks = game.order.map((_,index) => `<span class="round-dot ${game.orderChecked && game.order[index] === state.fragments[index] ? 'done' : game.orderChecked ? 'current' : ''}"></span>`).join('');
-        const feedback = game.feedback || (isFinal ? 'Susun dahulu. Kemudian berlatih dengan kiraan.' : 'Alihkan petikan ke atas atau ke bawah untuk menyusunnya.');
-        $('playCard').innerHTML = `<div class="panel-top"><div class="eyebrow">MISI ${String(m.id).padStart(2,'0')} · ${isFinal ? 'CABARAN AKHIR' : 'TEKA-TEKI SUSUNAN'}</div><h3>${m.icon} ${esc(m.title)}</h3><p>${isFinal ? 'Susun petikan, baca dengan rentak dan raikan usaha kamu.' : 'Susun petikan mengikut urutan yang dipelajari bersama guru.'}</p></div>
-          <div class="panel-body"><div class="mission-meta"><div class="round-dots" aria-label="Petikan lirik">${marks}</div><span class="score-mini">${game.order.length} petikan</span></div>
-            <div class="challenge-box"><h4>🧩 Susun petikan</h4><p>Gunakan anak panah besar untuk mengubah urutan.</p><ol class="order-list">${rows}</ol>
-              <div class="panel-actions"><button class="btn btn-primary" id="checkOrder" type="button">Semak susunan ✅</button></div><div class="result-message ${game.feedbackType || ''}" role="status">${esc(feedback)}</div>
-            </div>
-          </div>`;
-        // data-move stores the destination position.
+        if (game.orderDone && isFinal && !game.performanceDone) { renderPerformance(m); return; }
+        const locked = Boolean(game.orderDone || game.orderLocked || game.finishing);
+        const rows = game.order.map((fragment,index) => '<li class="order-row"><span class="order-num">' + (index+1) + '</span><span class="order-text">' + esc(fragment) + '</span><button class="move-btn" data-move="' + (index-1) + '" type="button" aria-label="Alihkan ke atas" ' + (index===0 || locked ? 'disabled' : '') + '>↑</button><button class="move-btn" data-move="' + (index+1) + '" type="button" aria-label="Alihkan ke bawah" ' + (index===game.order.length-1 || locked ? 'disabled' : '') + '>↓</button></li>').join('');
+        const marks = game.order.map((_,index) => '<span class="round-dot ' + (game.orderChecked && game.order[index] === state.fragments[index] ? 'done' : game.orderChecked ? 'current' : '') + '"></span>').join('');
+        const feedback = game.feedback || 'Cubaan ' + Math.min(game.orderTries + 1, 2) + ' daripada 2. Susun petikan mengikut urutan yang dipelajari.';
+        $('playCard').innerHTML =
+          '<div class="panel-top"><div class="eyebrow">MISI ' + String(m.id).padStart(2,'0') + ' · ' + (isFinal ? 'CABARAN AKHIR' : 'TEKA-TEKI SUSUNAN') + '</div><h3>' + m.icon + ' ' + esc(m.title) + '</h3><p>' + (isFinal ? 'Susun petikan, baca dengan rentak dan raikan usaha kamu.' : 'Susun petikan mengikut urutan yang dipelajari bersama guru.') + '</p></div>' +
+          '<div class="panel-body"><div class="mission-meta"><div class="round-dots" aria-label="Petikan lirik">' + marks + '</div><span class="score-mini">' + game.order.length + ' petikan · Cubaan ' + Math.min(game.orderTries + 1, 2) + ' daripada 2</span></div>' +
+            '<div class="challenge-box"><h4>🧩 Susun petikan</h4><p>Gunakan anak panah besar untuk mengubah urutan. Jika belum tepat, kamu boleh ubah sekali lagi.</p><ol class="order-list">' + rows + '</ol>' +
+              '<div class="panel-actions"><button class="btn btn-primary" id="checkOrder" type="button" ' + (locked ? 'disabled' : '') + '>' + (locked ? 'Jawapan disemak' : 'Semak susunan ✅') + '</button></div><div class="result-message ' + (game.feedbackType || '') + '" role="status">' + esc(feedback) + '</div>' +
+            '</div></div>';
         $('playCard').querySelectorAll('.order-row').forEach((row,index) => row.querySelectorAll('[data-move]').forEach((button) => button.addEventListener('click', () => moveFragment(index, Number(button.dataset.move)))));
         $('checkOrder').addEventListener('click', () => checkOrder(isFinal));
       }
       function moveFragment(from, to) {
-        if (to < 0 || to >= game.order.length || from === to) return;
+        if (game.orderDone || game.orderLocked || game.finishing || to < 0 || to >= game.order.length || from === to) return;
         playSfx('move');
         const [item] = game.order.splice(from,1); game.order.splice(to,0,item);
         game.orderChecked=false; game.feedback=''; game.feedbackType=''; render();
       }
       function checkOrder(isFinal) {
-        if (game.finishing) return;
+        if (game.finishing || game.orderDone) return;
         game.orderTries++;
         game.orderChecked=true;
-        game.orderCorrect=game.order.every((fragment,index) => fragment === state.fragments[index]);
-        if (!game.orderCorrect) {
-          playSfx('try');
-          const correct = game.order.filter((fragment,index) => fragment === state.fragments[index]).length;
-          game.feedback = `${correct} daripada ${game.order.length} petikan sudah di tempat yang betul. Cuba lagi!`;
+        game.orderCorrectCount = game.order.reduce((count,fragment,index) => count + (fragment === state.fragments[index] ? 1 : 0), 0);
+        game.orderCorrect = game.orderCorrectCount === game.order.length;
+        if (game.orderCorrect) {
+          playSfx('correct');
+          game.orderDone=true;
+          game.feedback='Tepat! Semua petikan sudah mengikut urutan.';
+          game.feedbackType='good';
+          if (isFinal) {
+            game.finalScore = game.orderTries === 1 ? 250 : 220;
+            game.finalStars = game.orderTries === 1 ? 3 : 2;
+            render();
+            return;
+          }
+          const score = game.orderTries === 1 ? 150 : 125;
+          const stars = game.orderTries === 1 ? 3 : 2;
+          game.finishing=true;
+          render();
+          setTimeout(() => completeMission(2,score,stars), 450);
+          return;
+        }
+        playSfx('try');
+        if (game.orderTries === 1) {
+          game.feedback = game.orderCorrectCount + ' daripada ' + game.order.length + ' petikan sudah di tempat yang betul. Kamu boleh ubah susunan pada cubaan kedua.';
           game.feedbackType='try';
           render();
           return;
         }
-        playSfx('correct');
-        game.feedback='Tepat! Semua petikan sudah mengikut urutan.';
-        game.feedbackType='good';
-        if (isFinal) { render(); return; }
-        const score = game.orderTries === 1 ? 150 : game.orderTries === 2 ? 125 : 100;
-        game.finishing = true;
-        setTimeout(() => completeMission(2,score,game.orderTries === 1 ? 3 : game.orderTries === 2 ? 2 : 1), 700);
+        const total = game.order.length;
+        const baseScore = isFinal ? 250 : 150;
+        const score = total ? Math.round(baseScore * game.orderCorrectCount / total) : 0;
+        const stars = !game.orderCorrectCount ? 0 : game.orderCorrectCount / total >= 0.75 ? 2 : 1;
+        const message = 'Markah dikira daripada ' + game.orderCorrectCount + ' daripada ' + total + ' petikan yang berada pada kedudukan tepat.';
+        game.orderDone=true;
+        game.finalMessage=message;
+        if (isFinal) {
+          game.orderPartialScore=score;
+          game.orderPartialStars=stars;
+          render();
+          return;
+        }
+        game.finishing=true;
+        game.feedback = 'Cubaan habis. ' + message + ' Kamu memperoleh +' + score + ' XP.';
+        game.feedbackType='try';
         render();
+        setTimeout(() => completeMission(2,score,stars,message), 700);
       }
       function renderPerformance(m) {
-        $('playCard').innerHTML = `<div class="panel-top"><div class="eyebrow">MISI 04 · PENTAS AKHIR</div><h3>🎤 Latihan Wira Muzik</h3><p>Petikan sudah tersusun. Sekarang ikut kiraan dan baca bersama guru.</p></div>
-          <div class="panel-body"><div class="challenge-box"><div style="font-size:45px;margin:4px 0 8px">🌟</div><h4>Rentak dan sebut dengan yakin!</h4><p>Tekan butang untuk mendengar kiraan muzik, kemudian baca petikan kuat-kuat bersama guru atau rakan.</p><div class="pattern"><span class="pattern-token">1</span><span class="pattern-token">2</span><span class="pattern-token">3</span><span class="pattern-token">4</span></div>
-              <button class="btn btn-yellow" id="playCount" type="button">🔔 Mainkan kiraan 1–2–3–4</button><div class="result-message" id="countStatus" role="status"></div>
-              <div class="performance"><h4>🎵 Persembahan kamu</h4><p>Baca petikan yang telah disusun dengan suara jelas dan penuh semangat. Minta guru atau rakan dengar.</p><button class="btn btn-primary" id="finishPerformance" type="button">Saya sudah berlatih! 🏆</button></div>
-            </div></div>`;
+        const orderNote = game.orderCorrect
+          ? '<div class="result-message good">Tepat! Semua petikan mengikut urutan.</div>'
+          : '<div class="result-message try">' + esc(game.finalMessage) + ' Markah akhir hanya dikira daripada petikan yang tepat.</div>';
+        $('playCard').innerHTML =
+          '<div class="panel-top"><div class="eyebrow">MISI 04 · PENTAS AKHIR</div><h3>🎤 Latihan Wira Muzik</h3><p>' + (game.orderCorrect ? 'Petikan sudah tersusun dengan tepat. Sekarang berlatih dengan kiraan.' : 'Selepas dua cubaan, markah susunan dikira daripada petikan yang tepat sahaja.') + '</p></div>' +
+          '<div class="panel-body"><div class="challenge-box"><div style="font-size:45px;margin:4px 0 8px">🌟</div><h4>Rentak dan sebut dengan yakin!</h4><p>Tekan butang untuk mendengar kiraan muzik, kemudian baca petikan bersama guru atau rakan.</p><div class="pattern"><span class="pattern-token">1</span><span class="pattern-token">2</span><span class="pattern-token">3</span><span class="pattern-token">4</span></div>' +
+              orderNote + '<button class="btn btn-yellow" id="playCount" type="button">🔔 Mainkan kiraan 1–2–3–4</button><div class="result-message" id="countStatus" role="status"></div>' +
+              '<div class="performance"><h4>🎵 Persembahan kamu</h4><p>Baca petikan dengan suara jelas dan penuh semangat. Minta guru atau rakan dengar.</p><button class="btn btn-primary" id="finishPerformance" type="button">Saya sudah berlatih! 🏆</button></div>' +
+            '</div></div>';
         $('playCount').addEventListener('click', playCountIn);
         $('finishPerformance').addEventListener('click', () => {
-          const score = game.orderTries === 1 ? 250 : game.orderTries === 2 ? 220 : 190;
-          completeMission(4,score,game.orderTries === 1 ? 3 : game.orderTries <= 3 ? 2 : 1);
+          const score = game.orderCorrect ? game.finalScore : game.orderPartialScore;
+          const stars = game.orderCorrect ? game.finalStars : game.orderPartialStars;
+          const message = game.orderCorrect ? '' : game.finalMessage;
+          completeMission(4,score,stars,message);
         });
       }
       function playCountIn() {
@@ -812,7 +896,7 @@
         playSfx('start');
         const m = missions.find((item) => item.id === id);
         if ((m.kind === 'order' || m.kind === 'final') && state.fragments.length < 2) { openTeacher(); return; }
-        game = { missionId:id, started:true, round:0, points:0, tries:0, roundTries:0, input:[], showPattern:true, feedback:'', order:m.kind === 'order' || m.kind === 'final' ? shuffle(state.fragments) : [], orderTries:0, orderChecked:false, orderCorrect:false, performanceDone:false };
+        game = { missionId:id, started:true, round:0, points:0, tries:0, roundTries:0, input:[], showPattern:true, feedback:'', order:m.kind === 'order' || m.kind === 'final' ? shuffle(state.fragments) : [], orderTries:0, orderChecked:false, orderCorrect:false, orderDone:false, orderLocked:false, orderCorrectCount:0, orderPartialScore:0, orderPartialStars:0, finalScore:0, finalStars:0, finalMessage:'', roundLocked:false, failedRounds:0, correctBeatCount:0, totalBeatCount:0, performanceDone:false };
         render();
       }
 
@@ -853,16 +937,16 @@
         if (game && game.finished && allMissionsDone()) render();
       }
 
-      function completeMission(id, score, stars) {
-        const old = state.completed[id];
-        state.completed[id] = { score:Math.max(score,Number(old?.score || 0)), stars:Math.max(stars,Number(old?.stars || 0)) };
+      function completeMission(id, score, stars, scoreMessage) {
+        const finalScore = Math.max(0, Number(score) || 0);
+        const finalStars = Math.max(0, Math.min(3, Number(stars) || 0));
+        state.completed[id] = { score:finalScore, stars:finalStars };
         persist();
-        game = { missionId:id, finished:true, lastScore:score, stars:state.completed[id].stars };
+        game = { missionId:id, finished:true, lastScore:finalScore, stars:finalStars, scoreMessage:scoreMessage || '' };
         render();
         playSfx('victory');
         if (allMissionsDone()) submitResults();
       }
-
       function renderWin() {
         const id = game.missionId;
         const m = missions.find((item) => item.id === id);
@@ -878,6 +962,7 @@
           '<div class="panel-top"><div class="eyebrow">' + (allDone ? 'SEMUA MISI SELESAI' : 'MISI SELESAI') + '</div><h3>' + (allDone ? '🏆 Wira Negaraku!' : m.icon + ' Misi berjaya!') + '</h3><p>' + (allDone ? 'Kamu sudah menamatkan seluruh pengembaraan Rhythm Heroes!' : 'Kamu berjaya menyelesaikan “' + esc(m.title) + '”. Laluan baharu sudah terbuka.') + '</p></div>' +
           '<div class="panel-body"><div class="win-screen"><div class="win-emoji">' + (allDone ? '👑' : m.badge) + '</div><h3>' + (allDone ? 'Tahniah, Wira!' : 'Hebat sekali!') + '</h3><p>' + (allDone ? 'Semua rentak dan petikan sudah kamu kuasai. Jemput guru dan rakan meraikan usaha kamu!' : 'Ganjaran diperoleh: ' + esc(m.reward) + '. Teruskan pengembaraan untuk buka misi seterusnya.') + '</p>' +
           '<div class="win-score"><span>⚡ +' + game.lastScore + ' XP</span><span class="stars">' + '⭐'.repeat(game.stars) + '☆'.repeat(3-game.stars) + '</span></div>' +
+          (game.scoreMessage ? '<div class="note" role="status">' + esc(game.scoreMessage) + '</div>' : '') +
           (allDone ? '<div class="final-banner">🌟 Semua misi selesai · ' + totalXP() + ' XP terkumpul · ' + totalStars() + ' bintang!<br>Wira Muzik, kamu memang hebat.</div>' + delivery : '') +
           '<div class="panel-actions"><button class="btn btn-primary" id="continueGame" type="button">' + (allDone ? '🗺️ Lihat peta lagi' : '➡️ Teruskan') + '</button><button class="btn btn-soft" id="replayGame" type="button">🔁 Main semula</button>' + retry + '</div></div></div>';
         $('continueGame').addEventListener('click', () => { game=null; selectedId = allDone ? 0 : Math.min(4,id+1); render(); if (!allDone) $('playCard').scrollIntoView({behavior:'smooth',block:'start'}); });
